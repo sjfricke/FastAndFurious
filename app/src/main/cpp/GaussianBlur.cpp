@@ -3,22 +3,28 @@
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
 #include <CL/opencl.h>
 
+void FastAndFurious::GaussianBlur_init()
+{
+
+  const char* kernel_file = "GaussianBlur.cl";
+
+   AAsset* asset = AAssetManager_open(m_aasset_manager, kernel_file, AASSET_MODE_BUFFER);
+  if (asset == NULL) {
+    LOGE("Error opening asset %s", kernel_file); exit(1);
+  }
+
+  off_t file_size = AAsset_getRemainingLength(asset);
+
+  m_blur_kernel_file = malloc(file_size);
+
+  int bytes_read = AAsset_read(asset, m_blur_kernel_file, file_size);
+  if (static_cast<int>(file_size) != bytes_read) {
+    LOGE("file_size: %d ==should=be== bytes_read: %d", static_cast<int>(file_size), bytes_read);
+  }
+}
+
 void FastAndFurious::GaussianBlur(ANativeWindow_Buffer*  buffer)
 {
-  // Compute c = a + b.
-  const char *kernel_source =
-      "#pragma OPENCL EXTENSION cl_khr_fp64 : enable\n"
-          "__kernel void vecAdd(  __global double *a,\n"
-          "                       __global double *b,\n"
-          "                       __global double *c,\n"
-          "                       const unsigned int n)\n"
-          "{\n"
-          "    int id = get_global_id(0);\n"
-          "    if (id < n) {\n"
-          "        c[id] = a[id] + b[id];\n"
-          "    }\n"
-          "}\n";
-
   clock_t start_t, end_t;
   double  time_t;
   start_t = clock(); // Start Time!
@@ -83,7 +89,7 @@ void FastAndFurious::GaussianBlur(ANativeWindow_Buffer*  buffer)
 
   // Create the compute program from the source buffer
   program = clCreateProgramWithSource(context, 1,
-                                      (const char **) &kernel_source, NULL, &err);
+                                      (const char **) &m_blur_kernel_file, NULL, &err);
 
   // Build the program executable
   clBuildProgram(program, 0, NULL, NULL, NULL, NULL);

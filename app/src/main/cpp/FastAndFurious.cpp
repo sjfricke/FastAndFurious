@@ -6,7 +6,8 @@ FastAndFurious::FastAndFurious()
       m_image_reader(nullptr),
       m_native_camera(nullptr),
       m_blur_mode(false),
-      m_fast_mode(false) {
+      m_fast_mode(false),
+      m_blur_kernel_file(nullptr){
 };
 
 FastAndFurious::~FastAndFurious() {
@@ -33,6 +34,11 @@ FastAndFurious::~FastAndFurious() {
     delete (m_image_reader);
     m_image_reader = nullptr;
   }
+
+  if (m_blur_kernel_file != nullptr) {
+    free (m_blur_kernel_file);
+    m_blur_kernel_file = nullptr;
+  }
 }
 
 void FastAndFurious::OnCreate(JNIEnv* env, jobject caller_activity) {
@@ -44,6 +50,9 @@ void FastAndFurious::OnCreate(JNIEnv* env, jobject caller_activity) {
 
   // on_loaded callbacks
   // on_callback = env->GetMethodID(handler_class, "JAVA_FUNCTION", "()V");
+
+  // Build OpenCL Kernels first
+  GaussianBlur_init();
 }
 
 void FastAndFurious::OnPause() {}

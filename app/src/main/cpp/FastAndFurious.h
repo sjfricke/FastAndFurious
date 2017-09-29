@@ -41,10 +41,8 @@ class FastAndFurious {
   // sets Surface buffer reference pointer
   void SetNativeWindow(ANativeWindow* native_indow);
 
-  // sets Surface buffer reference pointer
-  void SetAssetManager(AAssetManager* asset_manager) {
-    m_aasset_manager = asset_manager;
-  };
+  // sets Asset Manager reference pointer
+  void SetAssetManager(AAssetManager* asset_manager) { m_aasset_manager = asset_manager; };
 
   // Gets all the stuff needed to setup camera and calls loop
   void SetUpCamera();
@@ -62,6 +60,7 @@ class FastAndFurious {
   // This is needed due to being on seperate thread
   void HaltCamera();
 
+  void GaussianBlur_init();
   void GaussianBlur(ANativeWindow_Buffer* buffer);
 
   void BlurToggle(){ m_blur_mode = !m_blur_mode; };
@@ -99,6 +98,8 @@ class FastAndFurious {
   // Toggle bool to turn of/off features
   bool m_blur_mode;
   bool m_fast_mode;
+
+  void* m_blur_kernel_file;
 };
 
 #endif //FASTANDFURIOUS_FASTANDFURIOUS_H

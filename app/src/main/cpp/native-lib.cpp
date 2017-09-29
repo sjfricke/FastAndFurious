@@ -18,8 +18,8 @@ jint JNI_OnLoad(JavaVM *vm, void *) {
 JNIEXPORT void JNICALL
 Java_reality_escher_com_fastandfurious_MainActivity_onCreateJNI(
     JNIEnv *env, jobject clazz, jobject activity, jobject j_asset_manager) {
-  app.OnCreate(env, activity);
   app.SetAssetManager(AAssetManager_fromJava(env, j_asset_manager));
+  app.OnCreate(env, activity);
 }
 
 JNIEXPORT void JNICALL
