@@ -91,9 +91,13 @@ bool NativeCamera::MatchCaptureSizeRequest(ImageFormat* resView, int32_t width, 
   for (int i = 0; i < entry.count; ++i) {
     int32_t input = entry.data.i32[i * 4 + 3];
     int32_t format = entry.data.i32[i * 4 + 0];
+
     if (input) continue;
 
-    if (format == AIMAGE_FORMAT_YUV_420_888 || format == AIMAGE_FORMAT_JPEG) {
+    if (format == AIMAGE_FORMAT_YUV_420_888) {
+
+      LOGI("--H: %d -- W: %d -- ratio %f", entry.data.i32[i * 4 + 1], entry.data.i32[i * 4 + 2], (double)entry.data.i32[i * 4 + 1]/ (double)entry.data.i32[i * 4 + 2]);
+
       DisplayDimension res(entry.data.i32[i * 4 + 1],
                            entry.data.i32[i * 4 + 2]);
       if (!disp.IsSameRatio(res)) continue;
@@ -110,9 +114,9 @@ bool NativeCamera::MatchCaptureSizeRequest(ImageFormat* resView, int32_t width, 
   } else {
     if (disp.IsPortrait()) {
       resView->width = 480;
-      resView->height = 640;
+      resView->height = 720;
     } else {
-      resView->width = 640;
+      resView->width = 720;
       resView->height = 480;
     }
   }

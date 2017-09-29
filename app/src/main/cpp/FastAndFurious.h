@@ -11,7 +11,6 @@
 #include "NativeCamera.h"
 // C Libs
 #include <unistd.h>
-#include <time.h>
 // STD Libs
 #include <cstdlib>
 #include <string>
@@ -63,9 +62,10 @@ class FastAndFurious {
   // This is needed due to being on seperate thread
   void HaltCamera();
 
+  void GaussianBlur(ANativeWindow_Buffer* buffer);
+
   void BlurToggle(){ m_blur_mode = !m_blur_mode; };
   void FastToggle(){ m_fast_mode = !m_fast_mode; };
-
 
  private:
   // Cached Java VM, caller activity object
@@ -93,10 +93,6 @@ class FastAndFurious {
 
   // used to hold reference to assets in assets folder
   AAssetManager* m_aasset_manager;
-
-  // for timing OpenCV bottlenecks
-  clock_t start_t, end_t;
-  double  total_t;
 
   bool m_camera_thread_stopped = false;
 

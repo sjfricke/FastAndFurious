@@ -15,6 +15,7 @@
  */
 #include "ImageReader.h"
 #include <string>
+#include <stdlib.h>
 #include "Util.h"
 
 /**

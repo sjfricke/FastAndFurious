@@ -101,6 +101,10 @@ void FastAndFurious::CameraLoop() {
 
     m_image_reader->DisplayImage(&buffer, m_image);
 
+    if (true == m_blur_mode) {
+      GaussianBlur(&buffer);
+    }
+
     ANativeWindow_unlockAndPost(m_native_window);
     ANativeWindow_release(m_native_window);
   }
