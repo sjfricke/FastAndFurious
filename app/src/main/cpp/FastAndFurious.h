@@ -59,6 +59,8 @@ class FastAndFurious {
   void FlipCamera();
 
   // Stops camera active
+  // This will cause CameraLoop to break and call FlipCamera
+  // This is needed due to being on seperate thread
   void HaltCamera();
 
   void BlurToggle(){ m_blur_mode = !m_blur_mode; };

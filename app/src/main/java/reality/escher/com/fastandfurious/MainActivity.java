@@ -56,7 +56,7 @@ public class MainActivity extends AppCompatActivity {
         if (needRequire) {
             ActivityCompat.requestPermissions(this, accessPermissions, 1);
             return;
-            
+
         }
 
         // send class activity and assest fd to native code

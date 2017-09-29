@@ -37,6 +37,7 @@ Java_reality_escher_com_fastandfurious_MainActivity_fastToggle(
 JNIEXPORT void JNICALL
 Java_reality_escher_com_fastandfurious_MainActivity_flipCamera(
     JNIEnv *env, jobject clazz) {
+  app.HaltCamera();
 }
 
 // Alot of stuff depends on the m_frame_buffer being loaded
