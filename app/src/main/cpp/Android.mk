@@ -5,6 +5,9 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE    := libFaF
 LOCAL_CFLAGS    := -Werror -Wno-write-strings -std=c++11
-LOCAL_SRC_FILES := native-lib.cpp
+LOCAL_SRC_FILES := native-lib.cpp \
+                   FastAndFurious.cpp \
+                   ImageReader.cpp \
+                   NativeCamera.cpp
 LOCAL_LDLIBS    := -llog -landroid -lcamera2ndk -lmediandk
 include $(BUILD_SHARED_LIBRARY)

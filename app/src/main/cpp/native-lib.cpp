@@ -1,8 +1,6 @@
 #include <android/asset_manager_jni.h>
 #include <android/native_window_jni.h>
-#include <thread>
-#include <jni.h>
-#include <string>
+#include "FastAndFurious.h"
 
 static FastAndFurious app;
 
@@ -44,9 +42,8 @@ Java_reality_escher_com_fastandfurious_MainActivity_flipCamera(
 // Alot of stuff depends on the m_frame_buffer being loaded
 // this is done in SetNativeWindow
 JNIEXPORT void JNICALL
-Java_reality_escher_com_fastandfurious_MainActivity_setSurface(JNIEnv *env,
-                                                           jclass clazz,
-                                                           jobject surface) {
+Java_reality_escher_com_fastandfurious_MainActivity_setSurface(JNIEnv *env, jclass clazz, jobject surface) {
+
   // obtain a native window from a Java surface
   app.SetNativeWindow(ANativeWindow_fromSurface(env, surface));
 
@@ -60,15 +57,3 @@ Java_reality_escher_com_fastandfurious_MainActivity_setSurface(JNIEnv *env,
 #ifdef __cplusplus
 }
 #endif
-
-
-
-
-extern "C"
-JNIEXPORT jstring JNICALL
-Java_reality_escher_com_fastandfurious_MainActivity_stringFromJNI(
-    JNIEnv *env,
-    jobject /* this */) {
-  std::string hello = "Hello from C++";
-  return env->NewStringUTF(hello.c_str());
-}
