@@ -5,12 +5,17 @@
 #include <android/asset_manager.h>
 #include <android/native_window.h>
 #include <jni.h>
-// OpenCV-NDK App
+// OpenCL
+#define CL_USE_DEPRECATED_OPENCL_1_2_APIS
+#include <CL/opencl.h>
+#define PI_ 3.14159265359f
+// FastAndFurious
 #include "Util.h"
 #include "ImageReader.h"
 #include "NativeCamera.h"
 // C Libs
 #include <unistd.h>
+#include <math.h>
 // STD Libs
 #include <cstdlib>
 #include <string>
@@ -62,9 +67,15 @@ class FastAndFurious {
 
   void GaussianBlur_init();
   void GaussianBlur(ANativeWindow_Buffer* buffer);
+  void GaussianBlur_CPU(ANativeWindow_Buffer* buffer);
 
   void BlurToggle(){ m_blur_mode = !m_blur_mode; };
   void FastToggle(){ m_fast_mode = !m_fast_mode; };
+
+  cl_mem cl_create_buffer(cl_context context,
+                          cl_mem_flags flags,
+                          size_t size,
+                          void *host_ptr);
 
  private:
   // Cached Java VM, caller activity object
@@ -99,7 +110,29 @@ class FastAndFurious {
   bool m_blur_mode;
   bool m_fast_mode;
 
-  void* m_blur_kernel_file;
+  cl_platform_id gb_platform;        // OpenCL platform
+  cl_device_id gb_device;           // device ID
+  cl_context gb_context;               // context
+  cl_command_queue gb_queue;           // command queue
+  cl_program gb_program;               // program
+  void* gb_kernel_file;                // kernal char* of text
+  cl_kernel gb_kernel;                 // kernel
+  int gb_blur_sum = 61;
+  int gb_blur_dim = 5;
+
+//  int gb_filter[25] = {1,4,7,4,1,
+//                       4,16,26,16,4,
+//                       7,26,41,26,7,
+//                       4,16,26,16,4,
+//                       1,4,7,4,1};
+
+  int gb_filter[25] = {4,3,2,3,4, //16
+                      3,2,1,2,3,  //11
+                      2,1,1,1,2,  //7
+                      3,2,1,2,3,  //11
+                      4,3,2,3,4}; //16
+
+
 };
 
 #endif //FASTANDFURIOUS_FASTANDFURIOUS_H

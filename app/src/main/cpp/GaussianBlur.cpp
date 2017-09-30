@@ -1,161 +1,168 @@
 #include "FastAndFurious.h"
 #include <time.h>
-#define CL_USE_DEPRECATED_OPENCL_1_2_APIS
-#include <CL/opencl.h>
+#include <stdlib.h>
 
 void FastAndFurious::GaussianBlur_init()
 {
+  cl_int err;
 
+  err = clGetPlatformIDs(1, &gb_platform, NULL);
+  if (err != CL_SUCCESS) { LOGE("error: clGetPlatformIDs() errcode %d", err); }
+
+  /* get available device */
+  err = clGetDeviceIDs(gb_platform, CL_DEVICE_TYPE_GPU, 1, &gb_device, NULL);
+  if (err != CL_SUCCESS) { LOGE("error: clGetDeviceIDs() errcode %d", err); }
+
+  /* create context */
+  gb_context = clCreateContext(NULL, 1, &gb_device, NULL, NULL, &err);
+  if (err != CL_SUCCESS) { LOGE("error: clCreateContext() errcode %d", err); }
+
+  /* create comand queue */
+  gb_queue = clCreateCommandQueue(gb_context, gb_device, 0, &err);
+  if (err != CL_SUCCESS) { LOGE("error: clGetPlatformIDs() errcode %d", err); }
+
+  /* create program source */
   const char* kernel_file = "GaussianBlur.cl";
 
-   AAsset* asset = AAssetManager_open(m_aasset_manager, kernel_file, AASSET_MODE_BUFFER);
+  AAsset* asset = AAssetManager_open(m_aasset_manager, kernel_file, AASSET_MODE_BUFFER);
   if (asset == NULL) {
     LOGE("Error opening asset %s", kernel_file); exit(1);
   }
 
   off_t file_size = AAsset_getRemainingLength(asset);
+  gb_kernel_file = malloc(file_size);
 
-  m_blur_kernel_file = malloc(file_size);
-
-  int bytes_read = AAsset_read(asset, m_blur_kernel_file, file_size);
+  int bytes_read = AAsset_read(asset, gb_kernel_file, file_size);
   if (static_cast<int>(file_size) != bytes_read) {
     LOGE("file_size: %d ==should=be== bytes_read: %d", static_cast<int>(file_size), bytes_read);
   }
+
+  LOGI("%s", gb_kernel_file );
+
+  gb_program = clCreateProgramWithSource(gb_context, 1, (const char **)&gb_kernel_file, NULL, &err);
+  if (err != CL_SUCCESS) { LOGE("error: clGetPlatformIDs() errcode %d", err); }
+
+  err = clBuildProgram(gb_program, 0, NULL, NULL, NULL, NULL);
+  if (err != CL_SUCCESS) { LOGE("error: clBuildProgram() errcode %d", err); }
+
+  if (err == CL_BUILD_PROGRAM_FAILURE) {
+    // Determine the size of the log
+    size_t log_size;
+    clGetProgramBuildInfo(gb_program, gb_device, CL_PROGRAM_BUILD_LOG, 0, NULL, &log_size);
+
+    // Allocate memory for the log
+    char *log = (char *) malloc(log_size);
+
+    // Get the log
+    clGetProgramBuildInfo(gb_program, gb_device, CL_PROGRAM_BUILD_LOG, log_size, log, NULL);
+
+    // Print the log
+    LOGE("%s\n", log);
+  }
+
 }
 
 void FastAndFurious::GaussianBlur(ANativeWindow_Buffer*  buffer)
 {
-  clock_t start_t, end_t;
-  double  time_t;
-  start_t = clock(); // Start Time!
-
-  // Length of vectors
-  unsigned int n = 1000000;
-
-  // Host input vectors
-  double *h_a;
-  double *h_b;
-  // Host output vector
-  double *h_c;
-
-  // Device input buffers
-  cl_mem d_a;
-  cl_mem d_b;
-  // Device output buffer
-  cl_mem d_c;
-
-  cl_platform_id cpPlatform;        // OpenCL platform
-  cl_device_id device_id;           // device ID
-  cl_context context;               // context
-  cl_command_queue queue;           // command queue
-  cl_program program;               // program
-  cl_kernel kernel;                 // kernel
-
-  // Size, in bytes, of each vector
-  size_t bytes = n * sizeof(double);
-
-  // Allocate memory for each vector on host
-  h_a = (double *) malloc(bytes);
-  h_b = (double *) malloc(bytes);
-  h_c = (double *) malloc(bytes);
-
-  // Initialize vectors on host
-  int i;
-  for (i = 0; i < n; i++) {
-    h_a[i] = 0 + i;
-    h_b[i] = 0 - i;
-  }
-
-  size_t globalSize, localSize;
+  cl_mem gray_buf, blur_buf, gauss_buf;
+  cl_kernel cl_img_gaussian_blur;
   cl_int err;
+  size_t global_wblur[2];
+  size_t local_wblur[2];
+  int len;
 
-  // Number of work items in each local work group
-  localSize = 64;
+  len = buffer->stride * buffer->height * 4;
 
-  // Number of total work items - localSize must be devisor
-  globalSize = 100032;
+  err = 0;
 
-  // Bind to platform
-  err = clGetPlatformIDs(1, &cpPlatform, NULL);
+  cl_img_gaussian_blur = clCreateKernel(gb_program, "cl_img_gaussian_blur", &err);
+  if (err != CL_SUCCESS) { LOGE("error: clCreateKernel() errcode %d", err); }
 
-  // Get ID for the device
-  err = clGetDeviceIDs(cpPlatform, CL_DEVICE_TYPE_GPU, 1, &device_id, NULL);
+  gray_buf = cl_create_buffer(gb_context,  CL_MEM_READ_ONLY, len, NULL);
+  gauss_buf = cl_create_buffer(gb_context, CL_MEM_READ_ONLY, gb_blur_dim*gb_blur_dim*sizeof(cl_int), NULL);
+  /* output buffer */
+  blur_buf = cl_create_buffer(gb_context, CL_MEM_WRITE_ONLY, len, NULL);
 
-  // Create a context
-  context = clCreateContext(0, 1, &device_id, NULL, NULL, &err);
+  err |= clSetKernelArg(cl_img_gaussian_blur, 0, sizeof(cl_mem), &gray_buf);
+  err |= clSetKernelArg(cl_img_gaussian_blur, 1, sizeof(cl_mem), &blur_buf);
+  err |= clSetKernelArg(cl_img_gaussian_blur, 2, sizeof(cl_mem), &gauss_buf);
+  err |= clSetKernelArg(cl_img_gaussian_blur, 3, sizeof(cl_int), &gb_blur_dim);
+  err |= clSetKernelArg(cl_img_gaussian_blur, 4, sizeof(cl_int), &gb_blur_sum);
+  err |= clSetKernelArg(cl_img_gaussian_blur, 5, sizeof(cl_int), &buffer->width);
+  err |= clSetKernelArg(cl_img_gaussian_blur, 6, sizeof(cl_int), &buffer->height);
+  err |= clSetKernelArg(cl_img_gaussian_blur, 7, sizeof(cl_int), &buffer->stride);
 
-  // Create a command queue
-  queue = clCreateCommandQueue(context, device_id, 0, &err);
+  if (err != CL_SUCCESS) { LOGE("error: clSetKernelArg() errcode %d", err); }
 
-  // Create the compute program from the source buffer
-  program = clCreateProgramWithSource(context, 1,
-                                      (const char **) &m_blur_kernel_file, NULL, &err);
+  err |= clEnqueueWriteBuffer(gb_queue, gray_buf, CL_FALSE, 0, len, buffer->bits, 0, NULL, NULL);
+  err |= clEnqueueWriteBuffer(gb_queue, gauss_buf, CL_FALSE, 0, gb_blur_dim*gb_blur_dim*sizeof(cl_int), &gb_filter, 0, NULL, NULL);
 
-  // Build the program executable
-  clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
+   if (err != CL_SUCCESS) { LOGE("error: clEnqueueWriteBuffer() errcode %d", err); }
 
-  // Create the compute kernel in the program we wish to run
-  kernel = clCreateKernel(program, "vecAdd", &err);
+  global_wblur[0] = buffer->height;
+  global_wblur[1] = buffer->stride;
+  local_wblur[0] = local_wblur[1] = 32;
 
-  // Create the input and output arrays in device memory for our calculation
-  d_a = clCreateBuffer(context, CL_MEM_READ_ONLY, bytes, NULL, NULL);
-  d_b = clCreateBuffer(context, CL_MEM_READ_ONLY, bytes, NULL, NULL);
-  d_c = clCreateBuffer(context, CL_MEM_WRITE_ONLY, bytes, NULL, NULL);
+  //LOGI("ABOUT TO RUN ON GPU");
 
-  // Write our data set into the input array in device memory
-  err = clEnqueueWriteBuffer(queue, d_a, CL_TRUE, 0,
-                             bytes, h_a, 0, NULL, NULL);
-  err |= clEnqueueWriteBuffer(queue, d_b, CL_TRUE, 0,
-                              bytes, h_b, 0, NULL, NULL);
+  err = clEnqueueNDRangeKernel(gb_queue, cl_img_gaussian_blur, 2, NULL, global_wblur, local_wblur, 0, NULL, NULL);
+   if (err != CL_SUCCESS) { LOGE("error: clEnqueueNDRangeKernel() errcode %d", err); }
 
-  // Set the arguments to our compute kernel
-  err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &d_a);
-  err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &d_b);
-  err |= clSetKernelArg(kernel, 2, sizeof(cl_mem), &d_c);
-  err |= clSetKernelArg(kernel, 3, sizeof(unsigned int), &n);
+  //LOGI("DONE ON GPU");
 
-  // Execute the kernel over the entire range of the data set
-  err = clEnqueueNDRangeKernel(queue, kernel, 1, NULL, &globalSize, &localSize,
-                               0, NULL, NULL);
+  err = clEnqueueReadBuffer(gb_queue, blur_buf, CL_TRUE, 0, len, buffer->bits, 0, NULL, NULL);
+  if (err != CL_SUCCESS) { LOGE("error: clEnqueueReadBuffer() errcode %d", err); }
 
-  // Wait for the command queue to get serviced before reading back results
-  clFinish(queue);
+  //LOGI("RETURN MEM FROM GPU");
 
-  // Read the results from the device
-  clEnqueueReadBuffer(queue, d_c, CL_TRUE, 0,
-                      bytes, h_c, 0, NULL, NULL);
+  clReleaseMemObject(gray_buf);
+  //LOGI("Rleaese 1");
+  clReleaseMemObject(blur_buf);
+  //LOGI("Rleaese 2");
+  clReleaseMemObject(gauss_buf);
+  //LOGI("Rleaese 3");
+  clReleaseKernel(cl_img_gaussian_blur);
+  //LOGI("Rleaese 4");
 
-
-  // Ends timing since rest is validation and cleanup
-  end_t = clock();
-  time_t = (double)(end_t - start_t) / CLOCKS_PER_SEC;
-
-  //Sum up vector c and print result divided by n, this should equal 0 within error
-  double sum = 0;
-  for (i = 0; i < n; i++) {
-    sum += h_c[i];
-  }
-  double result = (sum / (double) n);
-  LOGI("Vector Add - Should be 0.000 - Result: %f", result);
-
-  // release OpenCL resources
-  clReleaseMemObject(d_a);
-  clReleaseMemObject(d_b);
-  clReleaseMemObject(d_c);
-  clReleaseProgram(program);
-  clReleaseKernel(kernel);
-  clReleaseCommandQueue(queue);
-  clReleaseContext(context);
-
-  //release host memory
-  free(h_a);
-  free(h_b);
-  free(h_c);
 }
 
+//void FastAndFurious::GaussianBlur_CPU(ANativeWindow_Buffer *buffer) {
+////
+////  uint32_t size = 5;
+////  float sigma = .8;
+////  uint32_t i,x,y,imgLineSize;
+////  int32_t center,yOff,xOff;
+////  float* matrix,value;
+////  matrix = GaussianBlur_BlurKernel(size,sigma);
+////
+////  //find the size of one line of the image in bytes and the center of the gaussian kernel
+////  imgLineSize = buffer->stride * 4;
+////  center = size/2;
+////  //convolve all valid pixels with the gaussian kernel
+////  for(i = imgLineSize*(size-center)+center*4; i < (buffer->height * buffer->width * 4)-imgLineSize*(size-center)-center*4; i++)
+////  {
+////    value = 0;
+////    for(y=0; y  < size; y++)
+////    {
+////      yOff = imgLineSize *( y-center);
+////      for(x=0; x < size ; x++)
+////      {
+////        xOff = 4 * (x - center);
+////        buffer->
+////        value += matrix[y*size+x] * (buffer->bits[i+xOff+yOff]);
+////      }
+////    }
+////    buffer->bits[i] = value;
+////  }
+////  //free memory and save the image
+////  free(matrix);
+////  return true;
+////}
 //
-//  for (int h = 0; h < buffer->height; h++) {
-//    for (int w = 0; w < buffer->width; w++) {
-//      ((uint32_t*)buffer->bits)[ (h*buffer->stride) + w] &= 0xff00ff00;
-//    }
-//  }
+////
+////  for (int h = 0; h < buffer->height; h++) {
+////    for (int w = 0; w < buffer->width; w++) {
+////      ((uint32_t*)buffer->bits)[ (h*buffer->stride) + w] &= 0xff00ff00;
+////    }
+//}
+

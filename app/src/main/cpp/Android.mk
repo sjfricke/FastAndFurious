@@ -13,5 +13,6 @@ LOCAL_SRC_FILES := native-lib.cpp \
                    ImageReader.cpp \
                    NativeCamera.cpp \
                    GaussianBlur.cpp
+
 LOCAL_LDLIBS    := -llog -landroid -lcamera2ndk -lmediandk $(LIBS_PATH)/libOpenCL.so
 include $(BUILD_SHARED_LIBRARY)

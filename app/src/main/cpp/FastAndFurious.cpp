@@ -7,7 +7,7 @@ FastAndFurious::FastAndFurious()
       m_native_camera(nullptr),
       m_blur_mode(false),
       m_fast_mode(false),
-      m_blur_kernel_file(nullptr){
+      gb_kernel_file(nullptr){
 };
 
 FastAndFurious::~FastAndFurious() {
@@ -35,9 +35,9 @@ FastAndFurious::~FastAndFurious() {
     m_image_reader = nullptr;
   }
 
-  if (m_blur_kernel_file != nullptr) {
-    free (m_blur_kernel_file);
-    m_blur_kernel_file = nullptr;
+  if (gb_kernel_file != nullptr) {
+    free (gb_kernel_file);
+    gb_kernel_file = nullptr;
   }
 }
 
@@ -96,7 +96,9 @@ void FastAndFurious::CameraLoop() {
     if (m_image == nullptr) { continue; }
 
     ANativeWindow_acquire(m_native_window);
+
     ANativeWindow_Buffer buffer;
+
     if (ANativeWindow_lock(m_native_window, &buffer, nullptr) < 0) {
       m_image_reader->DeleteImage(m_image);
       m_image = nullptr;
@@ -108,10 +110,25 @@ void FastAndFurious::CameraLoop() {
       LOGI("/// H-W-S-F: %d, %d, %d, %d", buffer.height, buffer.width, buffer.stride, buffer.format);
     }
 
-    m_image_reader->DisplayImage(&buffer, m_image);
+//    // if we need to blur we will need the output to be the displayed buffer
+//    if (true == m_blur_mode) {
+//      // TODO!!!
+//      // only make this buffer once and just check if the ANative_Window buffer size has changed
+//      void* camera_in_buffer = malloc(buffer.stride*buffer.height*4);
+//      m_image_reader->DisplayImage(&camera_in_buffer, m_image);
+//      GaussianBlur(&buffer);
+//      free(camera_in_buffer);
+//
+//    } else {
+//      m_image_reader->DisplayImage(&buffer, m_image);
+//    }
+
 
     if (true == m_blur_mode) {
+      m_image_reader->DisplayImage(&buffer, m_image);
       GaussianBlur(&buffer);
+    } else {
+      m_image_reader->DisplayImage(&buffer, m_image);
     }
 
     ANativeWindow_unlockAndPost(m_native_window);
@@ -154,4 +171,20 @@ void FastAndFurious::FlipCamera() {
 
   std::thread loopThread(&FastAndFurious::CameraLoop, this);
   loopThread.detach();
+}
+
+cl_mem FastAndFurious::cl_create_buffer(cl_context context,
+                     cl_mem_flags flags,
+                     size_t size,
+                     void *host_ptr)
+{
+  cl_mem buf;
+  cl_int err;
+
+  buf = clCreateBuffer(context, flags, size, host_ptr, &err);
+
+  if (err != CL_SUCCESS) {
+    LOGE("error: clCreateBuffer() %d", err);
+  }
+  return buf;
 }
