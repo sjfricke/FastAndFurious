@@ -110,20 +110,6 @@ void FastAndFurious::CameraLoop() {
       LOGI("/// H-W-S-F: %d, %d, %d, %d", buffer.height, buffer.width, buffer.stride, buffer.format);
     }
 
-//    // if we need to blur we will need the output to be the displayed buffer
-//    if (true == m_blur_mode) {
-//      // TODO!!!
-//      // only make this buffer once and just check if the ANative_Window buffer size has changed
-//      void* camera_in_buffer = malloc(buffer.stride*buffer.height*4);
-//      m_image_reader->DisplayImage(&camera_in_buffer, m_image);
-//      GaussianBlur(&buffer);
-//      free(camera_in_buffer);
-//
-//    } else {
-//      m_image_reader->DisplayImage(&buffer, m_image);
-//    }
-
-
     if (true == m_blur_mode) {
       m_image_reader->DisplayImage(&buffer, m_image);
       GaussianBlur(&buffer);
@@ -174,9 +160,9 @@ void FastAndFurious::FlipCamera() {
 }
 
 cl_mem FastAndFurious::cl_create_buffer(cl_context context,
-                     cl_mem_flags flags,
-                     size_t size,
-                     void *host_ptr)
+                                        cl_mem_flags flags,
+                                        size_t size,
+                                        void *host_ptr)
 {
   cl_mem buf;
   cl_int err;

@@ -16,26 +16,26 @@ jint JNI_OnLoad(JavaVM *vm, void *) {
 
 // Takes care of saving asset path and all
 JNIEXPORT void JNICALL
-Java_reality_escher_com_fastandfurious_MainActivity_onCreateJNI(
+Java_spencer_fricke_com_fastandfurious_MainActivity_onCreateJNI(
     JNIEnv *env, jobject clazz, jobject activity, jobject j_asset_manager) {
   app.SetAssetManager(AAssetManager_fromJava(env, j_asset_manager));
   app.OnCreate(env, activity);
 }
 
 JNIEXPORT void JNICALL
-Java_reality_escher_com_fastandfurious_MainActivity_blurToggle(
+Java_spencer_fricke_com_fastandfurious_MainActivity_blurToggle(
     JNIEnv *env, jobject clazz) {
   app.BlurToggle();
 }
 
 JNIEXPORT void JNICALL
-Java_reality_escher_com_fastandfurious_MainActivity_fastToggle(
+Java_spencer_fricke_com_fastandfurious_MainActivity_fastToggle(
     JNIEnv *env, jobject clazz) {
   app.FastToggle();
 }
 
 JNIEXPORT void JNICALL
-Java_reality_escher_com_fastandfurious_MainActivity_flipCamera(
+Java_spencer_fricke_com_fastandfurious_MainActivity_flipCamera(
     JNIEnv *env, jobject clazz) {
   app.HaltCamera();
 }
@@ -43,7 +43,7 @@ Java_reality_escher_com_fastandfurious_MainActivity_flipCamera(
 // Alot of stuff depends on the m_frame_buffer being loaded
 // this is done in SetNativeWindow
 JNIEXPORT void JNICALL
-Java_reality_escher_com_fastandfurious_MainActivity_setSurface(JNIEnv *env, jclass clazz, jobject surface) {
+Java_spencer_fricke_com_fastandfurious_MainActivity_setSurface(JNIEnv *env, jclass clazz, jobject surface) {
 
   // obtain a native window from a Java surface
   app.SetNativeWindow(ANativeWindow_fromSurface(env, surface));

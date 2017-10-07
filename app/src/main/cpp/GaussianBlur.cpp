@@ -37,7 +37,7 @@ void FastAndFurious::GaussianBlur_init()
     LOGE("file_size: %d ==should=be== bytes_read: %d", static_cast<int>(file_size), bytes_read);
   }
 
-  LOGI("%s", gb_kernel_file );
+  //LOGI("%s", gb_kernel_file );
 
   gb_program = clCreateProgramWithSource(gb_context, 1, (const char **)&gb_kernel_file, NULL, &err);
   if (err != CL_SUCCESS) { LOGE("error: clGetPlatformIDs() errcode %d", err); }

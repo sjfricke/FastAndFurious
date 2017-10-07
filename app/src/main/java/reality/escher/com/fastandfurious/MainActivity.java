@@ -1,4 +1,4 @@
-package reality.escher.com.fastandfurious;
+package spencer.fricke.com.fastandfurious;
 
 import android.Manifest;
 import android.app.Activity;
